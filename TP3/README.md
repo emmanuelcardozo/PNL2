@@ -2,7 +2,7 @@
 
 Sistema de consulta de CVs basado en Retrieval-Augmented Generation (RAG) con arquitectura multi-agente. Cada integrante del equipo tiene su propio agente especializado; un orquestador central enruta cada consulta al agente o agentes correspondientes según los nombres mencionados en la pregunta.
 
-**Trabajo Práctico 6 — LLMs · Cardozo & Didoné**
+**Trabajo Práctico 3 — Agentes\RAG**
 
 ---
 
@@ -117,7 +117,7 @@ Cada respuesta muestra un badge de routing (**DEFAULT** / **NAMED** / **MULTI**)
 ## Estructura del código
 
 ```
-TP6_Rag_MultiAgent_Cardozo-Didone.py
+TP3_MultiAgente.py
 │
 ├── validate_openai_key()        # Verifica la API key contra OpenAI
 ├── normalize_name()             # Sanitiza nombres de archivo a ASCII puro
