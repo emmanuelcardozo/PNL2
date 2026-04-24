@@ -272,12 +272,12 @@ def build_agent(openai_key, pinecone_key, index_name, namespace, person_name):
     retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
     system_prompt = (
-        "You are an assistant specialized in analyzing the CV of "
-        + person_name.capitalize()
-        + ". Use ONLY the retrieved context to answer questions about this candidate. "
-        "If the information is not in the context, say so clearly. "
-        "Be concise and precise. Answer in the same language as the question.\n\n"
-        "Context: {context}"
+        f"Eres un experto analizando el perfil de {person_name.capitalize()}. "
+        "Responde de forma profesional y directa sobre los datos presentes en su CV. "
+        "Si la pregunta te pide comparar o menciona datos que no están en su documento, "
+        "limítate a resumir lo que SÍ aparece en su historial profesional sobre el tema solicitado. "
+        "No intentes buscar conexiones con otras personas.\n\n"
+        "Contexto: {context}"
     )
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
@@ -372,17 +372,33 @@ def orchestrate(query: str, session_id: str) -> tuple[str, str, str]:
         )
         return result["answer"], routing_label, mode
 
-    # ── Case 3: multiple persons mentioned ───────────────────────────────────
+# ── Case 3: multiple persons mentioned ───────────────────────────────────
+
     mode = "multi"
     routing_label = f"Múltiples personas detectadas → agentes: **{', '.join(n.capitalize() for n in mentioned)}**"
     combined_parts = []
+    
     for name in mentioned:
+        # 1. Limpiamos la query: eliminamos menciones a otros candidatos 
+        # para que el agente no intente buscar "junto a..." o "comparado con..."
+        others = [n for n in mentioned if n != name]
+        clean_query = query
+        for other in others:
+            # Reemplaza el nombre del otro por un espacio para evitar confusión
+            clean_query = re.sub(rf"\b{other}\b", "", clean_query, flags=re.IGNORECASE)
+        
+        # 2. Instrucción ultra-específica y aislada
+        prompt_individual = f"Analiza únicamente la información de {name.capitalize()} respecto a: {clean_query}"
+        
         result = agents[name].invoke(
-            {"input": query},
+            {"input": prompt_individual},
             config={"configurable": {"session_id": session_id}},
         )
-        combined_parts.append(f"**{name.capitalize()}:** {result['answer']}")
-    combined_answer = "\n\n".join(combined_parts)
+        
+        # 3. Formateo de salida independiente
+        combined_parts.append(f"### 📄 Perfil: {name.capitalize()}\n{result['answer']}")
+    
+    combined_answer = "\n\n---\n\n".join(combined_parts)
     return combined_answer, routing_label, mode
 
 
